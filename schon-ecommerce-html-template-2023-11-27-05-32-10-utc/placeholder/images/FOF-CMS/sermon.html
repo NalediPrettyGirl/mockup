@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sermons Management</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="container mt-5">
+   <h2>Sermon</h2>
+    <h2>Thursday Sermon</h2>
+    <form id="createThursSermonForm" class="mb-4">
+      <div class="mb-3"><label for="thursSermonTitle" class="form-label">Title</label><input type="text" class="form-control" id="thursSermonTitle" required></div>
+      <div class="mb-3"><label for="thursSermonDescription" class="form-label">Description</label><textarea class="form-control" id="thursSermonDescription" rows="3" required></textarea></div>
+      <div class="mb-3"><label for="thursSermonUrl" class="form-label">URL</label><input type="text" class="form-control" id="thursSermonUrl" required></div>
+      <button type="submit" class="btn btn-primary">Create Thursday Sermon</button>
+    </form>
+    <ul id="thursSermonsList" class="list-group mb-4"></ul>
+    <form id="updateThursSermonForm" style="display:none;" class="mb-4">
+      <input type="hidden" id="updateThursSermonId">
+      <div class="mb-3"><label for="updateThursSermonTitle" class="form-label">Title</label><input type="text" class="form-control" id="updateThursSermonTitle" required></div>
+      <div class="mb-3"><label for="updateThursSermonDescription" class="form-label">Description</label><textarea class="form-control" id="updateThursSermonDescription" rows="3" required></textarea></div>
+      <div class="mb-3"><label for="updateThursSermonUrl" class="form-label">URL</label><input type="text" class="form-control" id="updateThursSermonUrl" required></div>
+      <button type="submit" class="btn btn-success">Update Thursday Sermon</button>
+      <button type="button" id="cancelUpdateThurs" class="btn btn-secondary">Cancel</button>
+    </form>
+
+    <!-- Sunday Sermon Form -->
+    <h2>Sunday Sermon</h2>
+    <form id="createSundaySermonForm" class="mb-4">
+      <div class="mb-3"><label for="sundaySermonTitle" class="form-label">Title</label><input type="text" class="form-control" id="sundaySermonTitle" required></div>
+      <div class="mb-3"><label for="sundaySermonDescription" class="form-label">Description</label><textarea class="form-control" id="sundaySermonDescription" rows="3" required></textarea></div>
+      <div class="mb-3"><label for="sundaySermonUrl" class="form-label">URL</label><input type="text" class="form-control" id="sundaySermonUrl" required></div>
+      <button type="submit" class="btn btn-primary">Create Sunday Sermon</button>
+    </form>
+    <ul id="sundaySermonsList" class="list-group mb-4"></ul>
+    <form id="updateSundaySermonForm" style="display:none;" class="mb-4">
+      <input type="hidden" id="updateSundaySermonId">
+      <div class="mb-3"><label for="updateSundaySermonTitle" class="form-label">Title</label><input type="text" class="form-control" id="updateSundaySermonTitle" required></div>
+      <div class="mb-3"><label for="updateSundaySermonDescription" class="form-label">Description</label><textarea class="form-control" id="updateSundaySermonDescription" rows="3" required></textarea></div>
+      <div class="mb-3"><label for="updateSundaySermonUrl" class="form-label">URL</label><input type="text" class="form-control" id="updateSundaySermonUrl" required></div>
+      <button type="submit" class="btn btn-success">Update Sunday Sermon</button>
+      <button type="button" id="cancelUpdateSunday" class="btn btn-secondary">Cancel</button>
+    </form>
+  </div>
+
+  <script>
+const THURS_API = 'https://fof-website-upgrade-api.onrender.com/thursSermon';
+const SUNDAY_API = 'https://fof-website-upgrade-api.onrender.com/sundaySermon';
+
+// Thursday Sermon CRUD
+async function fetchThursSermons() {
+  const list = document.getElementById('thursSermonsList');
+  list.innerHTML = '';
+  try {
+    const res = await fetch(THURS_API);
+    if (!res.ok) {
+      throw new Error('Network response was not ok: ' + res.status);
+    }
+    const thursSermons = await res.json();
+    thursSermons.forEach(sermon => {
+      const li = document.createElement('li');
+      li.className = 'list-group-item d-flex justify-content-between align-items-center';
+      li.innerHTML = `
+        <span>
+          <strong>${sermon.title}</strong><br>
+          <em>Description:</em> ${sermon.description}<br>
+          <em>URL:</em> <a href="${sermon.url}" target="_blank">${sermon.url}</a>
+        </span>
+        <span>
+          <button class="btn btn-sm btn-info me-2 thurs-edit" data-id="${sermon.id}" data-title="${encodeURIComponent(sermon.title)}" data-description="${encodeURIComponent(sermon.description)}" data-url="${encodeURIComponent(sermon.url)}">Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteThursSermon('${sermon.id}')">Delete</button>
+        </span>
+      `;
+      list.appendChild(li);
+    });
+    // Attach event listeners for edit buttons
+    document.querySelectorAll('.thurs-edit').forEach(btn => {
+      btn.onclick = function() {
+        const id = btn.getAttribute('data-id');
+        const title = decodeURIComponent(btn.getAttribute('data-title'));
+        const description = decodeURIComponent(btn.getAttribute('data-description'));
+        const url = decodeURIComponent(btn.getAttribute('data-url'));
+        showUpdateThursForm(id, title, description, url);
+      };
+    });
+  } catch (error) {
+    list.innerHTML = `<li class="list-group-item list-group-item-danger">Error fetching Thursday sermons: ${error.message}</li>`;
+    console.error('Error fetching Thursday sermons:', error);
+  }
+}
+
+const createThursForm = document.getElementById('createThursSermonForm');
+createThursForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const title = document.getElementById('thursSermonTitle').value;
+  const description = document.getElementById('thursSermonDescription').value;
+  const url = document.getElementById('thursSermonUrl').value;
+  await fetch(THURS_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, description, url })
+  });
+  createThursForm.reset();
+  fetchThursSermons();
+});
+
+window.showUpdateThursForm = function(id, title, description, url) {
+  const updateForm = document.getElementById('updateThursSermonForm');
+  updateForm.style.display = 'block';
+  updateForm.reset();
+  document.getElementById('updateThursSermonId').value = id;
+  document.getElementById('updateThursSermonTitle').value = title;
+  document.getElementById('updateThursSermonDescription').value = description;
+  document.getElementById('updateThursSermonUrl').value = url;
+};
+
+document.getElementById('cancelUpdateThurs').onclick = function() {
+  document.getElementById('updateThursSermonForm').style.display = 'none';
+};
+
+const updateThursForm = document.getElementById('updateThursSermonForm');
+updateThursForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('updateThursSermonId').value;
+  const title = document.getElementById('updateThursSermonTitle').value;
+  const description = document.getElementById('updateThursSermonDescription').value;
+  const url = document.getElementById('updateThursSermonUrl').value;
+  await fetch(`${THURS_API}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, description, url })
+  });
+  updateThursForm.reset();
+  updateThursForm.style.display = 'none';
+  fetchThursSermons();
+});
+
+window.deleteThursSermon = async function(id) {
+  await fetch(`${THURS_API}/${id}`, { method: 'DELETE' });
+  fetchThursSermons();
+};
+
+// Sunday Sermon CRUD
+async function fetchSundaySermons() {
+  const list = document.getElementById('sundaySermonsList');
+  list.innerHTML = '';
+  try {
+    const res = await fetch(SUNDAY_API);
+    if (!res.ok) {
+      throw new Error('Network response was not ok: ' + res.status);
+    }
+    const sundaySermons = await res.json();
+    sundaySermons.forEach(sermon => {
+      const li = document.createElement('li');
+      li.className = 'list-group-item d-flex justify-content-between align-items-center';
+      li.innerHTML = `
+        <span>
+          <strong>${sermon.title}</strong><br>
+          <em>Description:</em> ${sermon.description}<br>
+          <em>URL:</em> <a href="${sermon.url}" target="_blank">${sermon.url}</a>
+        </span>
+        <span>
+          <button class="btn btn-sm btn-info me-2 sunday-edit" data-id="${sermon.id}" data-title="${encodeURIComponent(sermon.title)}" data-description="${encodeURIComponent(sermon.description)}" data-url="${encodeURIComponent(sermon.url)}">Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteSundaySermon('${sermon.id}')">Delete</button>
+        </span>
+      `;
+      list.appendChild(li);
+    });
+    // Attach event listeners for edit buttons
+    document.querySelectorAll('.sunday-edit').forEach(btn => {
+      btn.onclick = function() {
+        const id = btn.getAttribute('data-id');
+        const title = decodeURIComponent(btn.getAttribute('data-title'));
+        const description = decodeURIComponent(btn.getAttribute('data-description'));
+        const url = decodeURIComponent(btn.getAttribute('data-url'));
+        showUpdateSundayForm(id, title, description, url);
+      };
+    });
+  } catch (error) {
+    list.innerHTML = `<li class="list-group-item list-group-item-danger">Error fetching Sunday sermons: ${error.message}</li>`;
+    console.error('Error fetching Sunday sermons:', error);
+  }
+}
+
+const createSundayForm = document.getElementById('createSundaySermonForm');
+createSundayForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const title = document.getElementById('sundaySermonTitle').value;
+  const description = document.getElementById('sundaySermonDescription').value;
+  const url = document.getElementById('sundaySermonUrl').value;
+  await fetch(SUNDAY_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, description, url })
+  });
+  createSundayForm.reset();
+  fetchSundaySermons();
+});
+
+window.showUpdateSundayForm = function(id, title, description, url) {
+  const updateForm = document.getElementById('updateSundaySermonForm');
+  updateForm.style.display = 'block';
+  updateForm.reset();
+  document.getElementById('updateSundaySermonId').value = id;
+  document.getElementById('updateSundaySermonTitle').value = title;
+  document.getElementById('updateSundaySermonDescription').value = description;
+  document.getElementById('updateSundaySermonUrl').value = url;
+};
+
+document.getElementById('cancelUpdateSunday').onclick = function() {
+  document.getElementById('updateSundaySermonForm').style.display = 'none';
+};
+
+const updateSundayForm = document.getElementById('updateSundaySermonForm');
+updateSundayForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('updateSundaySermonId').value;
+  const title = document.getElementById('updateSundaySermonTitle').value;
+  const description = document.getElementById('updateSundaySermonDescription').value;
+  const url = document.getElementById('updateSundaySermonUrl').value;
+  await fetch(`${SUNDAY_API}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, description, url })
+  });
+  updateSundayForm.reset();
+  updateSundayForm.style.display = 'none';
+  fetchSundaySermons();
+});
+
+window.deleteSundaySermon = async function(id) {
+  await fetch(`${SUNDAY_API}/${id}`, { method: 'DELETE' });
+  fetchSundaySermons();
+};
+
+// Initial load
+fetchThursSermons();
+fetchSundaySermons();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nuggets Management</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="container mt-5">
+   <h2>Nuggets</h2>
+    <form id="createNuggetForm" class="mb-4">
+      <div class="mb-3">
+        <label for="nuggetTitle" class="form-label">Title</label>
+        <input type="text" class="form-control" id="nuggetTitle" required>
+      </div>
+      <div class="mb-3">
+        <label for="nuggetDescription" class="form-label">Description</label>
+        <textarea class="form-control" id="nuggetDescription" rows="3" required></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Create Nugget</button>
+    </form>
+
+    <!-- Nuggets List -->
+    <h2>All Nuggets</h2>
+    <ul id="nuggetsList" class="list-group mb-4"></ul>
+
+    <!-- Update Nugget Form -->
+    <form id="updateNuggetForm" style="display:none;" class="mb-4">
+      <input type="hidden" id="updateNuggetId">
+      <div class="mb-3">
+        <label for="updateNuggetTitle" class="form-label">Title</label>
+        <input type="text" class="form-control" id="updateNuggetTitle" required>
+      </div>
+      <div class="mb-3">
+        <label for="updateNuggetDescription" class="form-label">Description</label>
+        <textarea class="form-control" id="updateNuggetDescription" rows="3" required></textarea>
+      </div>
+      <button type="submit" class="btn btn-success">Update Nugget</button>
+      <button type="button" id="cancelUpdate" class="btn btn-secondary">Cancel</button>
+    </form>
+  </div>
+
+  <script>
+const NUGGETS_API_ENDPOINT = 'https://fof-website-upgrade-api.onrender.com/nuggets';
+
+// Fetch and display all nuggets
+async function fetchNuggets() {
+  const list = document.getElementById('nuggetsList');
+  list.innerHTML = '';
+  try {
+    const res = await fetch(NUGGETS_API_ENDPOINT);
+    if (!res.ok) {
+      throw new Error('Network response was not ok: ' + res.status);
+    }
+    const nuggets = await res.json();
+    nuggets.forEach(nugget => {
+      const li = document.createElement('li');
+      li.className = 'list-group-item d-flex justify-content-between align-items-center';
+      li.innerHTML = `
+        <span>
+          <strong>${nugget.title}</strong><br>
+          <em>Description:</em><br> ${nugget.description.replace(/\n/g, '<br>')}
+        </span>
+        <span>
+          <button class="btn btn-sm btn-info me-2 nugget-edit" data-id="${nugget.id}" data-title="${encodeURIComponent(nugget.title)}" data-description="${encodeURIComponent(nugget.description)}">Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteNugget('${nugget.id}')">Delete</button>
+        </span>
+      `;
+      list.appendChild(li);
+    });
+    // Attach event listeners for edit buttons
+    document.querySelectorAll('.nugget-edit').forEach(btn => {
+      btn.onclick = function() {
+        const id = btn.getAttribute('data-id');
+        const title = decodeURIComponent(btn.getAttribute('data-title'));
+        const description = decodeURIComponent(btn.getAttribute('data-description'));
+        showUpdateForm(id, title, description);
+      };
+    });
+  } catch (error) {
+    list.innerHTML = `<li class="list-group-item list-group-item-danger">Error fetching nuggets: ${error.message}</li>`;
+    console.error('Error fetching nuggets:', error);
+  }
+}
+
+// Create nugget
+const createForm = document.getElementById('createNuggetForm');
+createForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const title = document.getElementById('nuggetTitle').value;
+  const description = document.getElementById('nuggetDescription').value;
+  await fetch(NUGGETS_API_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, description })
+  });
+  createForm.reset();
+  fetchNuggets();
+});
+
+// Show update form
+window.showUpdateForm = function(id, title, description) {
+  const updateForm = document.getElementById('updateNuggetForm');
+  updateForm.style.display = 'block';
+  updateForm.reset();
+  document.getElementById('updateNuggetId').value = id;
+  document.getElementById('updateNuggetTitle').value = title;
+  document.getElementById('updateNuggetDescription').value = description;
+};
+
+document.getElementById('cancelUpdate').onclick = function() {
+  document.getElementById('updateNuggetForm').style.display = 'none';
+};
+
+// Update nugget
+const updateForm = document.getElementById('updateNuggetForm');
+updateForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('updateNuggetId').value;
+  const title = document.getElementById('updateNuggetTitle').value;
+  const description = document.getElementById('updateNuggetDescription').value;
+  await fetch(`${NUGGETS_API_ENDPOINT}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, description })
+  });
+  updateForm.reset();
+  updateForm.style.display = 'none';
+  fetchNuggets();
+});
+
+// Delete nugget
+window.deleteNugget = async function(id) {
+  await fetch(`${NUGGETS_API_ENDPOINT}/${id}`, { method: 'DELETE' });
+  fetchNuggets();
+};
+
+// Initial load
+fetchNuggets();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
